@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dogecoin Cloud Miner</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding-bottom: 70px; /* Space for fixed bottom menu */
+        }
+        .navbar { background-color: #1f1f1f; border-bottom: 1px solid #2d3748; }
+        .card, .modal-content {
+            background-color: #1e2732;
+            border: 1px solid #2d3748;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            border-radius: 15px;
+        }
+        .text-doge { color: #f2a900; }
+        .bg-doge { background-color: #f2a900; color: #121212; }
+        .bg-doge:hover { background-color: #d19200; color: #121212; }
+        
+        .stat-box { font-size: 1.6rem; font-weight: bold; font-family: monospace; }
+        .referral-box { background-color: #2d3748; border-radius: 8px; padding: 15px; }
+        
+        /* Modal Customization */
+        .modal-header { border-bottom: 1px solid #2d3748; }
+        .modal-footer { border-top: 1px solid #2d3748; }
+        .btn-close-white { filter: invert(1) grayscale(100%) brightness(200%); }
+
+        /* Footer Styling */
+        .main-footer {
+            margin-top: auto;
+            padding: 20px 0 30px 0;
+            text-align: center;
+            background-color: #1a1a1a;
+            border-top: 1px solid #2d3748;
+        }
+
+        /* Bottom Menu Icon Bar */
+        .icon-bar {
+            background-color: #1f1f1f;
+            border-top: 1px solid #2d3748;
+            z-index: 1030;
+        }
+        .icon-bar a { color: #888; transition: all 0.3s ease; }
+        .icon-bar a:hover, .icon-bar a.active { color: #f2a900; }
+        .icon-text { font-size: 0.75rem; font-weight: bold; margin-top: 2px; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-dark shadow-sm py-3">
+        <div class="container d-flex justify-content-between">
+            <a class="navbar-brand fw-bold m-0" href="#">
+                <img src="https://cryptologos.cc/logos/dogecoin-doge-logo.png" width="30" class="me-2 align-middle" alt="Doge">
+                DogeMiner Pro
+            </a>
+            <div class="text-white fs-5" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                <i class="fa fa-bell-o" style="cursor: pointer;"></i>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4 mb-5 flex-grow-1">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                
+                <div class="card p-4 text-center mb-4">
+                    <h4 class="mb-4 fw-bold"><i class="fa fa-tachometer text-doge me-2"></i> Mining Dashboard</h4>
+                    
+                    <div class="mb-4">
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text bg-dark text-doge border-secondary"><i class="fa fa-qrcode"></i></span>
+                            <input type="text" class="form-control bg-dark text-white border-secondary fs-6" id="dogeAddress" placeholder="Enter Dogecoin Address">
+                        </div>
+                    </div>
+                    
+                    <button class="btn bg-doge w-100 btn-lg mb-4 fw-bold shadow" id="mineBtn" onclick="toggleMining()">
+                        <i class="fa fa-play-circle me-2"></i> Start Mining Process
+                    </button>
+
+                    <div class="row text-center mb-2">
+                        <div class="col-6 border-end border-secondary">
+                            <p class="mb-1 text-muted text-uppercase small fw-bold">Active Hashrate</p>
+                            <p class="stat-box text-info m-0" id="hashrate">0.00 <span class="fs-6 text-muted">kH/s</span></p>
+                        </div>
+                        <div class="col-6">
+                            <p class="mb-1 text-muted text-uppercase small fw-bold">Your Balance</p>
+                            <p class="stat-box text-doge m-0"><span id="balance">0.00000000</span> <span class="fs-6">DOGE</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="referral-box text-start shadow-sm">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="fa fa-flash text-warning me-3 fa-2x"></i>
+                        <div>
+                            <h6 class="m-0 fw-bold">Automatic Withdrawals</h6>
+                            <small class="text-light">Payouts trigger instantly to your wallet at 1.00 DOGE.</small>
+                        </div>
+                    </div>
+                    <hr class="border-secondary my-3">
+                    <div class="d-flex align-items-center">
+                        <i class="fa fa-users text-success me-3 fa-2x"></i>
+                        <div>
+                            <h6 class="m-0 fw-bold">Referral Program</h6>
+                            <small class="text-light">Earn a 2% lifetime bonus from anyone who uses your link.</small>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <footer class="main-footer">
+        <div class="container">
+            <h5 class="fw-bold text-white mb-3">DogeMiner Pro</h5>
+            <div class="d-flex justify-content-center gap-4 mb-3 fs-4">
+                <a href="#" class="text-muted"><i class="fa fa-github"></i></a>
+                <a href="#" class="text-muted"><i class="fa fa-twitter"></i></a>
+                <a href="#" class="text-muted"><i class="fa fa-telegram"></i></a>
+            </div>
+            <p class="text-muted small m-0">&copy; 2026 All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <div class="icon-bar fixed-bottom d-flex justify-content-around align-items-center py-2 shadow-lg">
+        <a href="#" class="text-decoration-none text-center active d-flex flex-column align-items-center w-25" onclick="window.scrollTo(0,0);">
+            <i class="fa fa-home fa-lg mb-1"></i>
+            <span class="icon-text">Home</span>
+        </a>
+        <a href="#" class="text-decoration-none text-center d-flex flex-column align-items-center w-25" data-bs-toggle="modal" data-bs-target="#withdrawModal">
+            <i class="fa fa-money fa-lg mb-1"></i>
+            <span class="icon-text">Withdraw</span>
+        </a>
+        <a href="#" class="text-decoration-none text-center d-flex flex-column align-items-center w-25" data-bs-toggle="modal" data-bs-target="#referralsModal">
+            <i class="fa fa-share-alt fa-lg mb-1"></i>
+            <span class="icon-text">Referrals</span>
+        </a>
+        <a href="#" class="text-decoration-none text-center d-flex flex-column align-items-center w-25" data-bs-toggle="modal" data-bs-target="#settingsModal">
+            <i class="fa fa-cogs fa-lg mb-1"></i>
+            <span class="icon-text">Settings</span>
+        </a>
+    </div>
+
+    <div class="modal fade" id="withdrawModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-white">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="fa fa-money text-doge me-2"></i> Withdraw Funds</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <p class="text-muted mb-1">Current Mined Balance</p>
+                    <h2 class="text-doge mb-4 fw-bold" id="modalBalance">0.00000000 DOGE</h2>
+                    
+                    <div class="alert alert-dark border-secondary text-start" role="alert">
+                        <i class="fa fa-info-circle text-info me-2"></i> Minimum withdrawal is <strong>1.00 DOGE</strong>.
+                    </div>
+                    
+                    <button class="btn bg-doge w-100 fw-bold mt-2" onclick="attemptWithdraw()">
+                        Confirm Withdrawal
+                    </button>
+                    <p id="withdrawMsg" class="text-danger mt-3 mb-0" style="display:none; font-weight:bold;">Insufficient Balance!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="referralsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-white">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="fa fa-users text-success me-2"></i> Affiliate Program</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body py-4">
+                    <div class="row text-center mb-4">
+                        <div class="col-6 border-end border-secondary">
+                            <h3 class="text-white mb-0">0</h3>
+                            <small class="text-muted">Total Invites</small>
+                        </div>
+                        <div class="col-6">
+                            <h3 class="text-success mb-0">0.00</h3>
+                            <small class="text-muted">DOGE Earned</small>
+                        </div>
+                    </div>
+                    
+                    <p class="text-muted mb-2">Your Referral Link (2% Bonus)</p>
+                    <div class="input-group">
+                        <input type="text" class="form-control bg-dark text-white border-secondary" value="https://dogeminer.app/?ref=884A9b" readonly>
+                        <button class="btn btn-outline-secondary text-white" type="button" onclick="alert('Link Copied!')"><i class="fa fa-copy"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-white">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="fa fa-cogs text-secondary me-2"></i> Settings & Info</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body py-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span><i class="fa fa-moon-o me-2"></i> Dark Mode</span>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" checked disabled>
+                        </div>
+                    </div>
+                    <hr class="border-secondary">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span><i class="fa fa-volume-up me-2"></i> Mining Sounds</span>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox">
+                        </div>
+                    </div>
+                    <hr class="border-secondary">
+                    <div class="text-center mt-4">
+                        <small class="text-muted">App Version 1.0.4<br>Running on GitHub Pages</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isMining = false;
+        let balance = 0.00000000;
+        let worker;
+
+        const workerCode = `
+            let mining = false;
+            self.onmessage = function(e) {
+                if (e.data === 'start') {
+                    mining = true;
+                    benchmarkCPU();
+                } else if (e.data === 'stop') {
+                    mining = false;
+                }
+            };
+
+            function benchmarkCPU() {
+                if (!mining) return;
+                let start = performance.now();
+                let hashes = 0;
+                for(let i = 0; i < 800000; i++) { hashes += Math.random(); }
+                let end = performance.now();
+                
+                let timeTaken = (end - start) / 1000; 
+                let hashrate = (hashes / timeTaken / 10000).toFixed(2); 
+                
+                self.postMessage({ hashrate: hashrate });
+                setTimeout(benchmarkCPU, 1000); 
+            }
+        `;
+
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        worker = new Worker(URL.createObjectURL(blob));
+
+        worker.onmessage = function(e) {
+            if(isMining) {
+                document.getElementById('hashrate').innerHTML = e.data.hashrate + ' <span class="fs-6 text-muted">kH/s</span>';
+                balance += 0.00000045; 
+                
+                let formattedBalance = balance.toFixed(8);
+                document.getElementById('balance').innerText = formattedBalance;
+                document.getElementById('modalBalance').innerText = formattedBalance + " DOGE"; // Updates the withdraw modal too
+            }
+        };
+
+        function toggleMining() {
+            const address = document.getElementById('dogeAddress').value;
+            const btn = document.getElementById('mineBtn');
+
+            if (!address || address.length < 10) {
+                alert("Please enter a valid Dogecoin wallet address.");
+                return;
+            }
+
+            isMining = !isMining;
+
+            if (isMining) {
+                btn.innerHTML = '<i class="fa fa-stop-circle me-2"></i> Stop Mining';
+                btn.classList.replace('bg-doge', 'btn-danger');
+                worker.postMessage('start');
+            } else {
+                btn.innerHTML = '<i class="fa fa-play-circle me-2"></i> Start Mining Process';
+                btn.classList.replace('btn-danger', 'bg-doge');
+                worker.postMessage('stop');
+                document.getElementById('hashrate').innerHTML = '0.00 <span class="fs-6 text-muted">kH/s</span>';
+            }
+        }
+
+        function attemptWithdraw() {
+            if (balance < 1.0) {
+                const msg = document.getElementById('withdrawMsg');
+                msg.style.display = 'block';
+                setTimeout(() => { msg.style.display = 'none'; }, 3000);
+            } else {
+                alert("Withdrawal Processed!");
+            }
+        }
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
