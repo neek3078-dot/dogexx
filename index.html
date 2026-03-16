@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="as">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Niva Rani - Voice Only AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #050505;
+            --listen-color: #00e5ff;
+            --think-color: #f5a623;
+            --speak-color: #ff007f;
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.8);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            z-index: 10;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #fff;
+            letter-spacing: 1px;
+        }
+
+        .center-stage {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* --- MIC ANIMATIONS --- */
+        .mic-container {
+            position: relative;
+            width: 180px;
+            height: 180px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        .wave {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            opacity: 0;
+            z-index: 1;
+        }
+
+        /* 1. Listening State (Blue Waves) */
+        .listening .wave { background: var(--listen-color); }
+        .listening .wave:nth-child(1) { animation: waveAnim 1.5s infinite linear; }
+        .listening .wave:nth-child(2) { animation: waveAnim 1.5s infinite linear 0.5s; }
+        .listening .wave:nth-child(3) { animation: waveAnim 1.5s infinite linear 1s; }
+        .listening .mic-btn { border-color: var(--listen-color); color: var(--listen-color); box-shadow: 0 0 30px rgba(0, 229, 255, 0.4); }
+
+        /* 2. Thinking State (Orange Pulse) */
+        .thinking .mic-btn {
+            border-color: var(--think-color);
+            color: var(--think-color);
+            animation: pulseThink 1s infinite alternate;
+        }
+
+        /* 3. Speaking State (Pink Waves) */
+        .speaking .wave { background: var(--speak-color); }
+        .speaking .wave:nth-child(1) { animation: waveAnim 2s infinite ease-out; }
+        .speaking .wave:nth-child(2) { animation: waveAnim 2s infinite ease-out 0.6s; }
+        .speaking .wave:nth-child(3) { animation: waveAnim 2s infinite ease-out 1.2s; }
+        .speaking .mic-btn { border-color: var(--speak-color); color: var(--speak-color); box-shadow: 0 0 40px rgba(255, 0, 127, 0.5); }
+
+        @keyframes waveAnim {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+
+        @keyframes pulseThink {
+            0% { box-shadow: 0 0 10px var(--think-color); transform: scale(1); }
+            100% { box-shadow: 0 0 30px var(--think-color); transform: scale(1.05); }
+        }
+
+        .mic-btn {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: #111;
+            border: 2px solid #333;
+            color: #555;
+            font-size: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 5;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .mic-btn:active { transform: scale(0.95); }
+
+        /* Status Area (No large text box, just one line status) */
+        .status-area {
+            text-align: center;
+            padding: 0 20px;
+        }
+
+        .status-label {
+            font-size: 1.2rem;
+            color: #888;
+            letter-spacing: 2px;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .listening .status-label { color: var(--listen-color); }
+        .thinking .status-label { color: var(--think-color); }
+        .speaking .status-label { color: var(--speak-color); }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="header-title">নিভা ৰাণী (Niva Rani)</div>
+    </div>
+
+    <div class="center-stage">
+        <div class="mic-container idle" id="mic-container">
+            <div class="wave"></div>
+            <div class="wave"></div>
+            <div class="wave"></div>
+            
+            <button class="mic-btn" id="mic-btn">
+                <i class="fa-solid fa-microphone"></i>
+            </button>
+        </div>
+
+        <div class="status-area">
+            <div class="status-label" id="status-label">মাইক টিপক (TAP TO START)</div>
+        </div>
+    </div>
+
+    <script>
+        const GEMINI_API_KEY = 'AIzaSyCRAN1OLrM4sQaYRfwEk7jEE3UTJMLUxQc';
+        
+        const micContainer = document.getElementById('mic-container');
+        const micBtn = document.getElementById('mic-btn');
+        const statusLabel = document.getElementById('status-label');
+
+        // STRICT STATE MACHINE: 'idle' | 'listening' | 'thinking' | 'speaking'
+        let currentState = 'idle';
+
+        function setUIState(newState, textObj) {
+            currentState = newState;
+            micContainer.className = `mic-container ${newState}`;
+            statusLabel.innerText = textObj;
+        }
+
+        // --- TTS (VOICE OUTPUT) ---
+        const synth = window.speechSynthesis;
+        let aiVoice = null;
+
+        function loadVoices() {
+            if (!synth) return;
+            const voices = synth.getVoices();
+            aiVoice = voices.find(v => v.lang.includes('as')) || 
+                      voices.find(v => v.lang.includes('hi') || v.lang.includes('IN')) || 
+                      voices[0];
+        }
+
+        if (synth) {
+            synth.onvoiceschanged = loadVoices;
+            setTimeout(loadVoices, 500);
+        }
+
+        function speakAI(text) {
+            if (!synth) {
+                // Audio not supported, fallback to idle
+                setUIState('idle', 'Error: Voice not supported. Tap to retry.');
+                return;
+            }
+            
+            synth.cancel(); 
+            const utterance = new SpeechSynthesisUtterance(text);
+            if (aiVoice) utterance.voice = aiVoice;
+            utterance.lang = 'as-IN';
+            utterance.rate = 1.0;
+            utterance.pitch = 1.1;
+
+            utterance.onstart = () => {
+                setUIState('speaking', 'নিভা ৰাণীয়ে কৈ আছে... (SPEAKING)');
+            };
+
+            utterance.onend = () => {
+                // When speaking ends, automatically start listening again
+                setTimeout(() => {
+                    if (currentState !== 'idle') {
+                        startListening();
+                    }
+                }, 800);
+            };
+
+            utterance.onerror = (e) => {
+                console.warn("TTS Error:", e);
+                setUIState('idle', 'Error: Tap to Restart');
+            };
+
+            synth.speak(utterance);
+        }
+
+        // --- STT (MIC INPUT) ---
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'as-IN';
+            recognition.interimResults = false;
+            recognition.continuous = false; // Strictly false for clean turn-taking
+
+            recognition.onstart = () => {
+                setUIState('listening', 'মই শুনি আছো... (LISTENING)');
+                if (synth) synth.cancel(); 
+            };
+
+            recognition.onresult = (event) => {
+                const userText = event.results[0][0].transcript;
+                // Transition to thinking state, AI is processing
+                setUIState('thinking', 'ভাৱি আছো... (THINKING)');
+                fetchGeminiAPI(userText);
+            };
+
+            recognition.onerror = (event) => {
+                console.warn("Rec Error:", event.error);
+                if (event.error === 'no-speech') {
+                    // Just restart listening silently if user didn't speak
+                    if(currentState === 'listening') {
+                        setTimeout(startListening, 1000);
+                    }
+                } else {
+                    setUIState('idle', 'আকৌ টিপক (TAP TO RESTART)');
+                }
+            };
+            
+            recognition.onend = () => {
+                // If it ended while still in listening state (browser glitch), force restart
+                if (currentState === 'listening') {
+                    setTimeout(startListening, 500);
+                }
+            };
+        }
+
+        function startListening() {
+            if(!recognition) return;
+            try { 
+                recognition.start(); 
+            } catch(e) {
+                console.log("Mic start handled:", e);
+            }
+        }
+
+        // --- CLICK HANDLER ---
+        micBtn.addEventListener('click', () => {
+            if (!recognition) return alert("Browser does not support voice input.");
+
+            if (currentState === 'idle') {
+                // User wakes up the AI
+                // Unlock audio context on first click for mobile browsers
+                if(synth) synth.speak(new SpeechSynthesisUtterance("")); 
+                startListening();
+            } else {
+                // User wants to forcefully STOP everything
+                recognition.stop();
+                if(synth) synth.cancel();
+                setUIState('idle', 'ৰৈ গৈছে (STOPPED) - Tap to Start');
+            }
+        });
+
+        // --- GEMINI API ---
+        async function fetchGeminiAPI(prompt) {
+            try {
+                // Strict Prompt: No formatting, pure Assamese spoken word
+                const systemPrompt = `You are Niva Rani, a highly professional AI assistant. Keep responses very brief (1 or 2 sentences). You MUST reply in Assamese script (অসমীয়া) ONLY. CRITICAL RULE: Do NOT use ANY markdown formatting (*, #, _, etc.), bold text, or emojis. Provide plain spoken text only. User says: ` + prompt;
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt }] }] })
+                });
+                
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
+                
+                // We do NOT show this text on screen anymore. We just pass it to Voice.
+                const aiText = data.candidates[0].content.parts[0].text;
+                speakAI(aiText);
+
+            } catch (error) {
+                console.error("API Error:", error);
+                setUIState('idle', 'Network Error - Tap to Restart');
+            }
+        }
+    </script>
+</body>
+</html>
