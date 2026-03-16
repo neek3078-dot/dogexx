@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobile Party Lights</title>
+    <style>
+        /* Mobile responsive reset and fullscreen setup */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            /* Smooth transitions between flashes */
+            transition: background-color 0.05s ease-in-out; 
+            /* Prevent text selection on rapid tapping */
+            user-select: none; 
+            -webkit-user-select: none;
+        }
+
+        #startBtn {
+            padding: 20px 50px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(45deg, #ff00cc, #3333ff);
+            border: none;
+            border-radius: 50px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            cursor: pointer;
+            z-index: 10;
+            transition: transform 0.2s;
+        }
+
+        #startBtn:active {
+            transform: scale(0.95);
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 30px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <button id="startBtn">START PARTY</button>
+    <div id="instructions">Tap anywhere to stop</div>
+
+    <script>
+        const startBtn = document.getElementById('startBtn');
+        const instructions = document.getElementById('instructions');
+        // const music = document.getElementById('partyMusic'); // Uncomment if adding music
+        let flashInterval;
+        let wakeLock = null;
+
+        // Bright, high-contrast party colors
+        const colors = [
+            '#FF0000', // Red
+            '#00FF00', // Green
+            '#0000FF', // Blue
+            '#FFFF00', // Yellow
+            '#00FFFF', // Cyan
+            '#FF00FF', // Magenta
+            '#FFFFFF'  // White
+        ];
+
+        startBtn.addEventListener('click', async (e) => {
+            e.stopPropagation(); // Prevent the body click listener from immediately firing
+
+            // 1. Request Fullscreen (Essential for mobile)
+            try {
+                if (document.documentElement.requestFullscreen) {
+                    await document.documentElement.requestFullscreen();
+                } else if (document.documentElement.webkitRequestFullscreen) { /* Safari */
+                    await document.documentElement.webkitRequestFullscreen();
+                }
+            } catch (err) {
+                console.log("Fullscreen denied or unsupported.");
+            }
+
+            // 2. Request Screen Wake Lock (Keeps phone screen from turning off)
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                }
+            } catch (err) {
+                console.log("Wake Lock unsupported.");
+            }
+
+            // 3. Start Music (If you uncommented the audio tag above)
+            // if (music) music.play();
+
+            // 4. Hide UI and Start Flashing
+            startBtn.classList.add('hidden');
+            instructions.classList.add('hidden');
+            
+            // Flashes every 250ms (Matches a 120 BPM dance track)
+            flashInterval = setInterval(() => {
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                document.body.style.backgroundColor = randomColor;
+            }, 250); 
+        });
+
+        // Tap anywhere to stop the party
+        document.body.addEventListener('click', () => {
+            if (startBtn.classList.contains('hidden')) {
+                // Stop flashing
+                clearInterval(flashInterval);
+                document.body.style.backgroundColor = '#000';
+                
+                // Show UI
+                startBtn.classList.remove('hidden');
+                instructions.classList.remove('hidden');
+
+                // Stop Music (If using)
+                // if (music) { music.pause(); music.currentTime = 0; }
+
+                // Exit Fullscreen
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                }
+
+                // Release Wake Lock
+                if (wakeLock !== null) {
+                    wakeLock.release();
+                    wakeLock = null;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
