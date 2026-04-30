@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro AI Forex & Crypto Terminal</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            overflow-x: hidden;
+        }
+        .navbar {
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        #tvchart {
+            width: 100%;
+            height: 65vh;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: 1px solid #e9ecef;
+        }
+        .signal-panel {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: 1px solid #e9ecef;
+            height: 100%;
+        }
+        .badge-timeframe {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .badge-timeframe:hover, .badge-timeframe.active {
+            background-color: #0d6efd !important;
+            color: white !important;
+        }
+        .signal-card {
+            border-left: 4px solid #0d6efd;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .signal-buy { border-left-color: #198754; }
+        .signal-sell { border-left-color: #dc3545; }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation / Toolbar -->
+    <nav class="navbar navbar-expand-lg navbar-light px-4 py-3 mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold text-primary" href="#">
+                <i class="fas fa-chart-line me-2"></i>TradeAI Pro
+            </a>
+            
+            <div class="d-flex align-items-center gap-3">
+                <select id="pairSelect" class="form-select form-select-sm" style="width: auto;">
+                    <option value="BTCUSDT">BTC/USD (Demo Crypto)</option>
+                    <option value="EURUSD">EUR/USD (Needs API backend)</option>
+                    <option value="XAUUSD">GOLD/USD (Needs API backend)</option>
+                </select>
+
+                <div class="d-flex gap-2">
+                    <span class="badge bg-light text-dark border badge-timeframe active" data-time="5m">5m</span>
+                    <span class="badge bg-light text-dark border badge-timeframe" data-time="15m">15m</span>
+                    <span class="badge bg-light text-dark border badge-timeframe" data-time="1h">1h</span>
+                    <span class="badge bg-light text-dark border badge-timeframe" data-time="4h">4h</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid px-4">
+        <div class="row g-4">
+            <!-- Chart Column -->
+            <div class="col-lg-9">
+                <div id="tvchart"></div>
+            </div>
+            
+            <!-- AI Signal Column -->
+            <div class="col-lg-3">
+                <div class="signal-panel">
+                    <h5 class="fw-bold mb-4">
+                        <i class="fas fa-robot text-primary me-2"></i>AI Analyst
+                    </h5>
+                    <div id="signalContainer">
+                        <p class="text-muted small">Loading chart data to generate signals...</p>
+                        <!-- Signals injected here via JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TradingView Lightweight Charts -->
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    
+    <script>
+        // --- 1. CHART INITIALIZATION ---
+        const chartProperties = {
+            layout: { background: { color: '#ffffff' }, textColor: '#333' },
+            grid: {
+                vertLines: { color: '#f0f3fa' },
+                horzLines: { color: '#f0f3fa' },
+            },
+            crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+            rightPriceScale: { borderColor: '#cccccc' },
+            timeScale: { borderColor: '#cccccc', timeVisible: true }
+        };
+
+        const chartElement = document.getElementById('tvchart');
+        const chart = LightweightCharts.createChart(chartElement, chartProperties);
+        const candleSeries = chart.addCandlestickSeries({
+            upColor: '#26a69a', downColor: '#ef5350', borderVisible: false,
+            wickUpColor: '#26a69a', wickDownColor: '#ef5350'
+        });
+
+        // Make chart responsive
+        window.addEventListener('resize', () => {
+            chart.resize(chartElement.clientWidth, chartElement.clientHeight);
+        });
+
+        let currentInterval = '15m'; // Default to 15m
+        let currentPair = 'BTCUSDT';
+
+        // --- 2. DATA FETCHING (Public API Demo) ---
+        // I am using Binance's public API to guarantee real, lag-free data in the browser.
+        // TO USE METALPRICE API: Replace this fetch URL with your backend server URL that fetches from Metalprice.
+        async function fetchChartData(symbol, interval) {
+            try {
+                const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=200`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const cdata = data.map(d => {
+                    return {
+                        time: d[0] / 1000, 
+                        open: parseFloat(d[1]),
+                        high: parseFloat(d[2]),
+                        low: parseFloat(d[3]),
+                        close: parseFloat(d[4])
+                    }
+                });
+                candleSeries.setData(cdata);
+                generateAISignal(cdata);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                document.getElementById('signalContainer').innerHTML = `<p class="text-danger">Error loading data. Check console.</p>`;
+            }
+        }
+
+        // --- 3. AI ANALYST LOGIC (Simulated) ---
+        function generateAISignal(data) {
+            if (data.length < 10) return;
+            
+            const latest = data[data.length - 1];
+            const prev = data[data.length - 2];
+            const signalContainer = document.getElementById('signalContainer');
+            
+            // Simple Price Action Logic
+            let signalType = 'NEUTRAL';
+            if (latest.close > prev.high) signalType = 'BUY';
+            if (latest.close < prev.low) signalType = 'SELL';
+
+            if (signalType === 'NEUTRAL') {
+                signalContainer.innerHTML = `
+                    <div class="signal-card text-muted text-center border-left-0">
+                        <i class="fas fa-hourglass-half mb-2 fs-4"></i><br>
+                        Awaiting clear setup on ${currentInterval} timeframe...
+                    </div>`;
+                candleSeries.setMarkers([]); 
+                return;
+            }
+
+            // Calculate TP and SL
+            const range = latest.high - latest.low;
+            const slDistance = range * 1.5;
+            const tpDistance = range * 3; // 1:2 Risk Reward
+            
+            let tp, sl, color, icon;
+            if (signalType === 'BUY') {
+                tp = latest.close + tpDistance;
+                sl = latest.close - slDistance;
+                color = '#198754';
+                icon = 'fa-arrow-up';
+            } else {
+                tp = latest.close - tpDistance;
+                sl = latest.close + slDistance;
+                color = '#dc3545';
+                icon = 'fa-arrow-down';
+            }
+
+            // Render HTML Signal
+            signalContainer.innerHTML = `
+                <div class="signal-card signal-${signalType.toLowerCase()}">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge bg-${signalType === 'BUY' ? 'success' : 'danger'}">${signalType} SIGNAL</span>
+                        <small class="text-muted">${currentPair}</small>
+                    </div>
+                    <div class="mb-2"><strong>Entry:</strong> ${latest.close.toFixed(2)}</div>
+                    <div class="text-success mb-1"><i class="fas fa-bullseye me-2"></i><strong>TP:</strong> ${tp.toFixed(2)}</div>
+                    <div class="text-danger"><i class="fas fa-shield-alt me-2"></i><strong>SL:</strong> ${sl.toFixed(2)}</div>
+                </div>
+                <p class="small text-muted mt-3">
+                    <i class="fas fa-info-circle me-1"></i>
+                    AI Analysis based on recent momentum and volatility breakout on the ${currentInterval} chart.
+                </p>
+            `;
+
+            // Draw Markers on the Chart
+            candleSeries.setMarkers([
+                {
+                    time: latest.time,
+                    position: signalType === 'BUY' ? 'belowBar' : 'aboveBar',
+                    color: color,
+                    shape: signalType === 'BUY' ? 'arrowUp' : 'arrowDown',
+                    text: `${signalType} Entry`
+                }
+            ]);
+        }
+
+        // --- 4. EVENT LISTENERS ---
+        document.querySelectorAll('.badge-timeframe').forEach(badge => {
+            badge.addEventListener('click', (e) => {
+                document.querySelectorAll('.badge-timeframe').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentInterval = e.target.getAttribute('data-time');
+                fetchChartData(currentPair, currentInterval);
+            });
+        });
+
+        document.getElementById('pairSelect').addEventListener('change', (e) => {
+            currentPair = e.target.value;
+            fetchChartData(currentPair, currentInterval);
+        });
+
+        // Initial Load
+        fetchChartData(currentPair, currentInterval);
+
+        // Real-time update simulation (polling every 10 seconds)
+        setInterval(() => {
+            fetchChartData(currentPair, currentInterval);
+        }, 10000);
+
+    </script>
+</body>
+</html>
