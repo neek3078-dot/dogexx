@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J.A.R.V.I.S. Mobile Assistant</title>
+    <style>
+        :root {
+            --neon-blue: #00f3ff;
+            --bg-color: #050505;
+            --text-main: #e0e0e0;
+            --glass-bg: rgba(0, 243, 255, 0.05);
+            --glass-border: rgba(0, 243, 255, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .grid {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: -1;
+        }
+
+        /* --- BOOT SCREEN --- */
+        #bootScreen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--bg-color);
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .power-btn {
+            background: rgba(0, 243, 255, 0.1);
+            color: var(--neon-blue);
+            border: 2px solid var(--neon-blue);
+            padding: 20px 40px;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            cursor: pointer;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+            transition: all 0.3s;
+        }
+
+        .power-btn:active {
+            background: var(--neon-blue);
+            color: var(--bg-color);
+        }
+
+        /* --- MAIN UI --- */
+        #mainUI {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 450px;
+            padding: 20px;
+            text-align: center;
+            z-index: 1;
+        }
+
+        #status {
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: var(--neon-blue);
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        .core {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            border: 2px solid var(--glass-border);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.1), inset 0 0 20px rgba(0, 243, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 40px;
+            transition: all 0.2s ease;
+        }
+
+        .core.speaking {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 40px var(--neon-blue), inset 0 0 40px var(--neon-blue);
+            transform: scale(1.05);
+        }
+
+        .inner-core {
+            width: 80px;
+            height: 80px;
+            background-color: rgba(0, 243, 255, 0.1);
+            border-radius: 50%;
+            border: 1px dashed var(--neon-blue);
+            animation: rotate 10s linear infinite;
+        }
+
+        #transcript {
+            font-size: 0.95rem;
+            height: 180px;
+            width: 100%;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow-y: auto;
+            text-align: left;
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .user-text { color: #888; font-size: 0.85rem; border-left: 2px solid #888; padding-left: 8px; margin-left: 10px;}
+        .ai-text { color: var(--neon-blue); font-weight: bold; border-left: 2px solid var(--neon-blue); padding-left: 8px; margin-right: 10px;}
+
+        .input-group {
+            display: flex;
+            width: 100%;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 15px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 1rem;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        button.action-btn {
+            background: transparent;
+            color: var(--neon-blue);
+            border: 1px solid var(--neon-blue);
+            padding: 0 20px;
+            font-size: 1rem;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-radius: 8px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button.action-btn:active {
+            background: var(--neon-blue);
+            color: var(--bg-color);
+        }
+
+        .dev-credit {
+            margin-top: 25px;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.3);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        @keyframes rotate {
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="grid"></div>
+
+    <div id="bootScreen">
+        <h2 style="color: var(--neon-blue); margin-bottom: 30px; letter-spacing: 4px;">SYSTEM STANDBY</h2>
+        <button class="power-btn" id="bootBtn">Tap to Initialize</button>
+    </div>
+    
+    <div id="mainUI">
+        <div id="status">Audio Output Online</div>
+        
+        <div class="core" id="jarvisCore">
+            <div class="inner-core"></div>
+        </div>
+
+        <div id="transcript">
+            </div>
+
+        <div class="input-group">
+            <input type="text" id="cmdInput" placeholder="Type a command..." autocomplete="off">
+            <button class="action-btn" id="sendBtn">Send</button>
+        </div>
+
+        <div class="dev-credit">Developer: Pinku Borah</div>
+    </div>
+
+    <script>
+        const bootScreen = document.getElementById('bootScreen');
+        const mainUI = document.getElementById('mainUI');
+        const bootBtn = document.getElementById('bootBtn');
+        const cmdInput = document.getElementById('cmdInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const transcriptBox = document.getElementById('transcript');
+        const jarvisCore = document.getElementById('jarvisCore');
+        
+        const synth = window.speechSynthesis;
+        
+        // BUG FIX 1: We must store the utterance globally, otherwise Safari deletes it mid-sentence.
+        window.currentUtterance = null;
+        let availableVoices = [];
+
+        // Load voices safely
+        function loadVoices() {
+            availableVoices = synth.getVoices();
+        }
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = loadVoices;
+        }
+
+        // The core speaking function
+        function speak(text) {
+            if (synth.speaking) synth.cancel();
+
+            // Create new global utterance
+            window.currentUtterance = new SpeechSynthesisUtterance(text);
+            
+            // Try to find a good voice, but don't fail if we can't
+            if (availableVoices.length > 0) {
+                const jVoice = availableVoices.find(v => v.lang === 'en-GB' || v.name.includes('Male'));
+                if (jVoice) window.currentUtterance.voice = jVoice;
+            }
+            
+            window.currentUtterance.pitch = 0.9;
+            window.currentUtterance.rate = 1.0;
+
+            // Trigger animations
+            window.currentUtterance.onstart = () => { jarvisCore.classList.add('speaking'); };
+            window.currentUtterance.onend = () => { jarvisCore.classList.remove('speaking'); };
+            window.currentUtterance.onerror = (e) => { 
+                console.log("Audio Error:", e);
+                jarvisCore.classList.remove('speaking'); 
+            };
+
+            // Speak!
+            synth.speak(window.currentUtterance);
+        }
+
+        // BUG FIX 2: Unlock the phone's speaker by making it talk IMMEDIATELY when the button is clicked.
+        bootBtn.addEventListener('click', () => {
+            loadVoices(); // Force load voices
+            bootScreen.style.display = 'none';
+            mainUI.style.display = 'flex';
+            
+            const welcomeMsg = 'J.A.R.V.I.S system online. Awaiting text input.';
+            appendLog('System Boot', welcomeMsg);
+            speak(welcomeMsg); // This real audio unlocks the speaker for the whole session
+        });
+
+        function appendLog(userText, aiText) {
+            transcriptBox.innerHTML += `<div class="user-text">User: ${userText}</div>`;
+            transcriptBox.innerHTML += `<div class="ai-text">J.A.R.V.I.S: ${aiText}</div>`;
+            transcriptBox.scrollTop = transcriptBox.scrollHeight;
+        }
+
+        function processCommand() {
+            const userSaid = cmdInput.value.trim().toLowerCase();
+            if (!userSaid) return;
+
+            cmdInput.value = ''; 
+            cmdInput.blur(); // Hide keyboard on mobile
+
+            let reply = '';
+            
+            if (userSaid.includes('hello') || userSaid.includes('hi')) {
+                reply = 'Greetings. Audio systems are fully functional.';
+            } else if (userSaid.includes('who are you')) {
+                reply = 'I am your personal AI interface. I was built by Developer Pinku Borah.';
+            } else {
+                reply = `Command acknowledged: ${userSaid}. Processing.`;
+            }
+
+            appendLog(userSaid, reply);
+            speak(reply);
+        }
+
+        sendBtn.addEventListener('click', processCommand);
+        cmdInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') processCommand();
+        });
+    </script>
+</body>
+</html>
